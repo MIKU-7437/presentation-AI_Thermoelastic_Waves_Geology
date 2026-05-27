@@ -773,208 +773,77 @@
 \end{frame}
 
 \begin{frame}{FNO Spectral Block}
-
-\centering
-
-\resizebox{\textwidth}{!}{%
-\begin{tikzpicture}[
-    font=\small,
-    node distance=11mm,
-
-    block/.style={
-        rectangle,
-        rounded corners=2pt,
-        draw=blue!55!black,
-        fill=blue!8,
-        minimum width=26mm,
-        minimum height=9mm,
-        align=center
-    },
-
-    spectral/.style={
-        rectangle,
-        rounded corners=2pt,
-        draw=violet!60!black,
-        fill=violet!10,
-        minimum width=34mm,
-        minimum height=9mm,
-        align=center
-    },
-
-    local/.style={
-        rectangle,
-        rounded corners=2pt,
-        draw=orange!70!black,
-        fill=orange!10,
-        minimum width=32mm,
-        minimum height=9mm,
-        align=center
-    },
-
-    sum/.style={
-        circle,
-        draw=black!70,
-        fill=white,
-        minimum size=7mm
-    },
-
-    act/.style={
-        rectangle,
-        rounded corners=2pt,
-        draw=green!50!black,
-        fill=green!12,
-        minimum width=18mm,
-        minimum height=9mm,
-        align=center
-    },
-
-    arr/.style={
-        -{Latex[length=2mm]},
-        thick,
-        draw=black!65
-    }
-]
-
-\node[block] (vin) {$v_l$};
-
-\node[spectral, right=20mm of vin] (fft)
-{
-$\mathcal{F}(v_l)$\\
-FFT
-};
-
-\node[spectral, right=of fft] (weight)
-{
-$R_l \cdot \hat v_l$\\
-Spectral weights
-};
-
-\node[spectral, right=of weight] (ifft)
-{
-$\mathcal{F}^{-1}$\\
-Inverse FFT
-};
-
-\node[local, below=18mm of weight] (conv)
-{
-$\mathcal{C}_l(v_l)$\\
-Local convolution
-};
-
-\node[sum, right=18mm of ifft] (sum) {$+$};
-
-\node[act, right=15mm of sum] (sigma)
-{
-$\sigma$
-};
-
-\node[block, right=15mm of sigma] (vout)
-{
-$v_{l+1}$
-};
-
-\draw[arr] (vin) -- (fft);
-\draw[arr] (fft) -- (weight);
-\draw[arr] (weight) -- (ifft);
-\draw[arr] (ifft) -- (sum);
-
-\draw[arr] (vin.south) |- (conv.west);
-\draw[arr] (conv.east) -- (sum.south);
-
-\draw[arr] (sum) -- (sigma);
-\draw[arr] (sigma) -- (vout);
-
-\end{tikzpicture}}
-
-\vspace{2mm}
-
-\small
-\[
-v_{l+1}=
-\sigma\left(
-\mathcal{S}_l(v_l)+
-\mathcal{C}_l(v_l)
-\right)
-\]
-
-\vspace{1mm}
-
-\footnotesize
-\begin{itemize}
-    \item $\mathcal{F}$ --- Fourier transform
-    \item $\mathcal{F}^{-1}$ --- inverse Fourier transform
-    \item $R_l$ --- trainable spectral weights
-    \item $\mathcal{C}_l$ --- local convolution branch
-    \item $\sigma$ --- activation function
-\end{itemize}
-
+  \begin{columns}[T]
+    \begin{column}{0.50\textwidth}
+      \begin{block}{Block update}
+        \[
+          v_{l+1}=\sigma\left(\mathcal{S}_l(v_l)+\mathcal{C}_l(v_l)\right)
+        \]
+      \end{block}
+      \footnotesize
+      The spectral branch captures global frequency-domain interactions;
+      the local convolution branch captures neighboring spatial patterns.
+      \begin{block}{Retained modes}
+        \[
+          \texttt{modes}=[K_1,K_2],\qquad d=2
+        \]
+      \end{block}
+      \footnotesize
+      Only selected low-frequency Fourier coefficients are transformed by
+      learned weights. This controls capacity and computational cost.
+    \end{column}
+    \begin{column}{0.46\textwidth}
+      \begin{block}{Spectral convolution}
+        \[
+          \hat{v}_l=\mathcal{F}(v_l),\qquad
+          z_l=\mathcal{F}^{-1}\left(R_l\cdot\hat{v}_l\right)
+        \]
+      \end{block}
+      \scriptsize
+      $\mathcal{F}$ and $\mathcal{F}^{-1}$ are Fourier and inverse Fourier
+      transforms; $R_l$ is the trainable complex-valued spectral weight tensor.
+      \begin{block}{Optional grid channels}
+        \[
+          \tilde{a}(x,y)=[a(x,y),x,y]
+        \]
+      \end{block}
+      \footnotesize
+      With \texttt{add\_grid}, the model receives explicit normalized spatial
+      coordinates. This helps distinguish source, boundary, and interior regions
+    \end{column}
+  \end{columns}
 \end{frame}
 
-\begin{frame}{Training and Evaluation}
-
-\begin{columns}[T]
-
-\begin{column}{0.52\textwidth}
-
-\begin{block}{Supervised objective}
-\[
-\mathcal{L}=
-\lambda_{MSE}\mathcal{L}_{MSE}
-+
-\lambda_{rel}\mathcal{L}_{rel}
-\]
-\end{block}
-
-\vspace{1mm}
-
-\begin{block}{Channel normalization}
-\[
-\tilde{s}_{i,c}=
-\frac{s_{i,c}-\mu_c}{\sigma_c}
-\]
-\end{block}
-
-\footnotesize
-Normalization statistics are computed on the training set and reused during validation and inference.
-
-\vspace{2mm}
-
-\scriptsize
-\begin{itemize}
-    \item $\mathcal{L}_{MSE}$ --- mean squared error
-    \item $\mathcal{L}_{rel}$ --- relative error
-    \item $\lambda_{MSE},\lambda_{rel}$ --- loss weights
-    \item $\mu_c$ --- channel mean
-    \item $\sigma_c$ --- channel standard deviation
-\end{itemize}
-
-\end{column}
-
-\begin{column}{0.44\textwidth}
-
-\begin{alertblock}{Interpretation}
-\footnotesize
-FNO provides a neural-operator framework for field prediction, but the current implementation still requires output-scale recalibration before physically reliable interpretation.
-\end{alertblock}
-
-\vspace{2mm}
-
-\footnotesize
-
-Evaluation metrics should include:
-
-\begin{itemize}
-    \item relative $L^2$ error
-    \item field-level visual comparison
-    \item channel-wise error analysis
-    \item travel-time consistency checks
-\end{itemize}
-
-\end{column}
-
-\end{columns}
-
+\begin{frame}{Training, Evaluation, and Current FNO Caveat}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{block}{Supervised objective}
+        \[
+          \mathcal{L}=\lambda_{MSE}\mathcal{L}_{MSE}
+          +\lambda_{rel}\mathcal{L}_{rel}
+        \]
+      \end{block}
+      \scriptsize
+      Channel normalization is computed on the training set and reused for
+      validation, testing, and inference.
+      \[
+        \tilde{s}_{i,c}=\frac{s_{i,c}-\mu_c}{\sigma_c}
+      \]
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \begin{alertblock}{Interpretation in this thesis}
+        \footnotesize
+        FNO is valuable as a field-based neural-operator route, but the current
+        prototype still needs output-scale recalibration before it can be read
+        as a physically reliable predictor.
+      \end{alertblock}
+      \footnotesize
+      Evaluation should use field-level plots, channel-wise errors, relative
+      $L^2$ error, and travel-time sanity checks.
+    \end{column}
+  \end{columns}
 \end{frame}
+
 
 % Required packages:
 % \usepackage{tikz}

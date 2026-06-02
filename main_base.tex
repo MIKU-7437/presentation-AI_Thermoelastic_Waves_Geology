@@ -297,24 +297,25 @@
         % 2D plane-strain domain illustration
         \draw[thick, fill=AcademicPanel, draw=AcademicNavy]
           (0,0) rectangle (3.2,3.2);
-        \node[AcademicMuted, font=\footnotesize] at (1.6,1.6)
-          {$\Omega \subset \mathbb{R}^{2}$};
+        % Domain label in the top-left corner, clear of the arrow
+        \node[AcademicMuted, font=\footnotesize, anchor=north west]
+          at (0.18,3.02) {$\Omega \subset \mathbb{R}^{2}$};
         \node[AcademicMuted, font=\scriptsize, below] at (1.6,0)
           {$1$\,m};
         \node[AcademicMuted, font=\scriptsize, left] at (0,1.6)
           {$1$\,m};
-        % Source point
+        % Source point (label below left, clear of the arrow start)
         \fill[AcademicNavy] (0.65,1.10) circle (3pt);
-        \node[AcademicNavy, font=\scriptsize, above right=1pt]
+        \node[AcademicNavy, font=\scriptsize, below left=1pt]
           at (0.65,1.10) {$x_{s}$};
-        % Probe point
+        % Probe point (label above right, clear of the arrow end)
         \fill[AcademicBlue] (2.55,1.90) circle (3pt);
         \node[AcademicBlue, font=\scriptsize, above right=1pt]
           at (2.55,1.90) {$x_{p}$};
-        % Direction arrow
+        % Direction arrow, label above the line midway
         \draw[->, >={Stealth[length=2mm]}, thick, AcademicBlue]
           (0.65,1.10) -- (2.55,1.90)
-          node[midway, above, sloped, font=\scriptsize] {$d$};
+          node[midway, above=2pt, sloped, font=\scriptsize] {$d$};
         % Plane strain note
         \node[AcademicMuted, font=\scriptsize] at (1.6,-0.55)
           {plane strain: $\varepsilon_{zz} = 0$};

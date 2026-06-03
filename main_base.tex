@@ -697,27 +697,27 @@
   \end{columns}
 \end{frame}
 
-\begin{frame}{PINN Input and Architecture}
+\begin{frame}[shrink=5]{PINN Input and Architecture}
   \begin{block}{Public neural contract}
     \[
-      [x,y,z,t,E,\nu,\rho,\alpha,k,C_p]\rightarrow[T,u,v,w]
+      [x,y,t,E,\nu,\rho,\alpha,k,C_p]\rightarrow[T,u,v]
     \]
   \end{block}
   \begin{columns}[T]
     \begin{column}{0.56\textwidth}
       \centering
-      \resizebox{!}{0.42\textheight}{%
+      \resizebox{!}{0.34\textheight}{%
       \begin{tikzpicture}[
         font=\scriptsize,
-        node distance=4mm,
+        node distance=3mm,
         box/.style={draw=AcademicBlue, fill=AcademicPanel, rounded corners=1pt,
           align=center, inner sep=2.5pt, minimum height=6mm, minimum width=40mm},
         arrow/.style={-{Latex[length=2mm]}, thick, draw=AcademicBlue}
       ]
-        \node[box] (inp) {Input layer\\$10$ features};
-        \node[box, below=of inp] (h1) {Linear $10 \rightarrow 192$\\Tanh};
+        \node[box] (inp) {Input layer\\$9$ features};
+        \node[box, below=of inp] (h1) {Linear $9 \rightarrow 192$\\Tanh};
         \node[box, below=of h1] (hrep) {$5 \times$ hidden blocks\\Linear $192 \rightarrow 192$ + Tanh};
-        \node[box, below=of hrep] (out) {Output layer\\Linear $192 \rightarrow 4$};
+        \node[box, below=of hrep] (out) {Output layer\\Linear $192 \rightarrow 3$};
         \draw[arrow] (inp) -- (h1);
         \draw[arrow] (h1) -- (hrep);
         \draw[arrow] (hrep) -- (out);
@@ -730,16 +730,17 @@
       \begin{block}{Input features}
         \scriptsize
         \begin{tabular}{@{}ll@{}}
-          $x,y,z,t$ & geometry and time\\
+          $x,y,t$ & geometry and time\\
           $E,\nu$ & elastic parameters\\
           $\rho$ & density\\
           $\alpha,k,C_p$ & thermal parameters
         \end{tabular}
       \end{block}
       {\scriptsize\textbf{Output features.}
-      $\hat{Y}=[\hat{T},\hat{u},\hat{v},\hat{w}]$.
-      Temperature is predicted in kelvin; displacement is predicted in three
-      components. Inputs and supervised outputs are standardized. Velocity, stress, and strain are derived through autograd during residual and velocity-consistency evaluation.}
+      $\hat{Y}=[\hat{T},\hat{u},\hat{v}]$.
+      Temperature and two in-plane displacement components are predicted.
+      Velocity, stress, and strain are derived through autograd during residual
+      and velocity-consistency evaluation.}
     \end{column}
   \end{columns}
 \end{frame}
@@ -763,7 +764,7 @@
       \footnotesize
       \begin{itemize}
         \item $\mathcal{L}_{\mathrm{sup}}$: supervised field loss for
-              $T,u,v,w$.
+              $T,u,v$.
         \item $\mathcal{L}_{\mathrm{vel}}$: velocity consistency from time
               derivatives.
         \item $\mathcal{L}_{\mathrm{wave}}$: elastic wave residual.
@@ -1070,9 +1071,9 @@ thermoelastic state at each mesh node.
 \[
   \mathcal{G}=(\mathcal{V},\mathcal{E})
 \]
-\(\mathcal{G}\) — graph representation;  
-\(\mathcal{V}\) — mesh nodes;  
-\(\mathcal{E}\) — edges between neighbouring nodes.
+\(\mathcal{G}\) -- graph representation;  
+\(\mathcal{V}\) -- mesh nodes;  
+\(\mathcal{E}\) -- edges between neighbouring nodes.
 \end{block}
 
 \end{column}
@@ -1084,11 +1085,11 @@ thermoelastic state at each mesh node.
   \mathbf{x}_i^t=
   (\mathbf{p}_i,\mathbf{s}_i^t,\mathbf{m}_i,\mathbf{c})
 \]
-\(\mathbf{x}_i^t\) — feature vector of node \(i\) at time \(t\);  
-\(\mathbf{p}_i\) — node position;  
-\(\mathbf{s}_i^t\) — current physical state;  
-\(\mathbf{m}_i\) — material parameters;  
-\(\mathbf{c}\) — scenario condition.
+\(\mathbf{x}_i^t\) -- feature vector of node \(i\) at time \(t\);  
+\(\mathbf{p}_i\) -- node position;  
+\(\mathbf{s}_i^t\) -- current physical state;  
+\(\mathbf{m}_i\) -- material parameters;  
+\(\mathbf{c}\) -- scenario condition.
 \end{block}
 
 \vspace{-2mm}
@@ -1098,9 +1099,9 @@ thermoelastic state at each mesh node.
   \mathbf{e}_{ij}=
   [\mathbf{p}_j-\mathbf{p}_i,\|\mathbf{p}_j-\mathbf{p}_i\|]
 \]
-\(\mathbf{e}_{ij}\) — edge attribute between nodes \(i\) and \(j\);  
-\(\mathbf{p}_j-\mathbf{p}_i\) — relative position;  
-\(\|\mathbf{p}_j-\mathbf{p}_i\|\) — distance between nodes.
+\(\mathbf{e}_{ij}\) -- edge attribute between nodes \(i\) and \(j\);  
+\(\mathbf{p}_j-\mathbf{p}_i\) -- relative position;  
+\(\|\mathbf{p}_j-\mathbf{p}_i\|\) -- distance between nodes.
 \end{block}
 
 \vspace{-2mm}
@@ -1111,8 +1112,8 @@ thermoelastic state at each mesh node.
   =
   F_{\theta}(\mathcal{G},\mathbf{x}^t)_i
 \]
-\(F_{\theta}\) — trained MeshGraphNet model;  
-\(\hat{\mathbf{y}}_i^{\,t+1}\) — predicted physical fields for node \(i\).
+\(F_{\theta}\) -- trained MeshGraphNet model;  
+\(\hat{\mathbf{y}}_i^{\,t+1}\) -- predicted physical fields for node \(i\).
 \end{block}
 
 \end{column}

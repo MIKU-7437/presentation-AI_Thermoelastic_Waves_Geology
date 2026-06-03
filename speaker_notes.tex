@@ -144,7 +144,7 @@ To train and compare the models, the work uses a controlled synthetic dataset.
 Explain where the reference data come from and why they are synthetic.
 
 \WhatToSay
-The synthetic dataset was generated in COMSOL Multiphysics using a coupled thermoelastic model. The setup is a two-dimensional plane-strain geological domain with a size of $1\,\mathrm{m}\times1\,\mathrm{m}$. The initial temperature is $293.15\,\mathrm{K}$ and the source temperature is $1500\,\mathrm{K}$. From this model we export temperature, displacement, stress, strain, and velocity fields. These are not field measurements. They are controlled numerical reference data, which makes them suitable for comparing several surrogate models under the same assumptions.
+The training data is synthetic, generated in COMSOL Multiphysics with a coupled thermoelastic model. The setup is a 2D plane-strain domain, one by one metre, with an initial temperature of 293 kelvin and a localized source at 1500 kelvin. We export temperature, the two displacement components, stress, strain, and velocity as reference fields for all surrogates.
 
 \KeyPoints
 \begin{itemize}
@@ -162,7 +162,7 @@ The next slide shows the mesh and numerical domain used for these exports.
 Show the numerical domain and explain why mesh structure matters.
 
 \WhatToSay
-This slide shows the two-dimensional COMSOL model and finite-element mesh. The domain represents a simplified section of geological medium with an internal heated source. The mesh is refined near the source because this is where the strongest temperature, displacement, and stress gradients are expected. This mesh is important because it defines the spatial nodes and local structure from which the COMSOL fields are exported. Later, this same structure is useful for mesh-aware modelling, especially for the MeshGraphNet route.
+The geometry is a 2D section of rock with an internal heated source. The mesh is refined near the source, where temperature, displacement, and stress gradients are strongest. This mesh defines the spatial structure from which all fields are exported.
 
 \KeyPoints
 \begin{itemize}
@@ -180,7 +180,7 @@ Now I will show the main simulated thermoelastic fields.
 Connect the synthetic thermal source with temperature, displacement, and stress outputs.
 
 \WhatToSay
-The three images show the main result fields from the COMSOL setup. The first image shows the compact temperature disturbance produced by local heating. The second image shows the mechanical displacement response caused by thermal expansion around the heated region. The third image shows the stress response near the source. I would keep the explanation short here, because the slide is now mostly visual: the purpose is to show that the synthetic setup produces coupled thermal and mechanical fields that can be exported for model comparison.
+Three representative fields. Local heating creates a compact temperature disturbance near the source. Thermal expansion then produces a displacement field around the heated region. And the stress concentrates near the source. Together they confirm the coupled thermoelastic behaviour we expect, and they are the ground truth the models learn from.
 
 \KeyPoints
 \begin{itemize}
@@ -198,7 +198,7 @@ After simulation, the exported fields must be represented in a model-ready forma
 Explain how COMSOL exports are converted into inputs for different model families.
 
 \WhatToSay
-The COMSOL simulation results are exported as CSV files for each field and time step. These exports are aligned into a common node-based representation. Dynamic fields are assembled into a spatio-temporal tensor $\mathbf{S}\in\mathbb{R}^{N_t\times N_p\times F_d}$, where $N_t$ is the number of time steps, $N_p$ is the number of spatial points, and $F_d$ is the number of dynamic field channels. Static material and geometry features are stored separately. Before training, each feature channel is normalized with the usual mean and standard deviation formula. This gives a common processed dataset for coordinate-based, grid-based, graph-based, and attention-based routes.
+COMSOL exports are aligned into a common node-based representation. Dynamic fields are assembled into a spatio-temporal tensor of time steps, points, and field channels; static material features are stored separately. Every channel is normalized before training. The same processed dataset is reused by the coordinate-based, grid-based, and graph-based models -- that's what makes the comparison fair.
 
 \KeyPoints
 \begin{itemize}
@@ -216,7 +216,7 @@ Next, I will describe the comparative prototype framework.
 Explain that all model routes are evaluated under one shared workflow.
 
 \WhatToSay
-The prototype uses one workflow for all model routes. The frontend, backend orchestrator, material catalog, and model services follow one shared input--output contract. This is important for fair comparison: each route receives the same source--probe geometry, the same material presets, and the same normalized response format. The goal is not to present a production platform. The goal is to make a consistent research environment where different AI-guided prediction methods can be compared under the same conditions.
+All four models run through one shared workflow: the same frontend, backend orchestrator, material catalogue, and a single input--output contract. Same source--probe geometry, same material presets, same normalized response -- temperature, displacement, direction, travel time, and diagnostics. This is what lets us compare model families rather than implementations.
 
 \KeyPoints
 \begin{itemize}
@@ -234,7 +234,7 @@ Before discussing individual models, I will define the shared comparison contrac
 Clarify the inputs, outputs, and interpretation shared by all surrogate routes.
 
 \WhatToSay
-All routes are treated as surrogate modelling approaches for the same AI-guided thermoelastic prediction task. The input side includes material parameters, source--probe geometry, observation time, and processed field features. The output side includes estimated temperature, displacement components, travel time, and diagnostic response quantities. The comparison basis is the same material presets, geometry contract, response format, and analytical travel-time sanity check. This keeps the comparison fair and avoids presenting the models as complete numerical solvers.
+Each route is treated as a surrogate for the same prediction task, not as a full solver. The input is material parameters, geometry, time, and field features. The output is temperature, displacement, travel time, and diagnostics. The comparison basis is identical presets, the same response format, and one analytical travel-time sanity check.
 
 \KeyPoints
 \begin{itemize}
@@ -252,7 +252,7 @@ Before discussing the individual models, I will briefly describe the implementat
 Explain the software stack that connects the web interface with the model routes.
 
 \WhatToSay
-This slide summarizes the implementation stack behind the prototype. The system is packaged as a local Docker Compose workspace. The user interacts with a native HTML, CSS, and JavaScript frontend. The frontend sends a request to the FastAPI backend, which validates the input, reads the geological material catalog, routes the request to the selected model service, and normalizes the response. The model routes are implemented as Python inference services for PINN, FNO, MeshGraphNet, and Transformer-style prediction. The backend itself does not replace the machine-learning models. Its role is orchestration: it makes the four routes comparable by giving them the same input contract and returning the same response structure.
+The prototype is a local Docker Compose workspace. A web frontend for scenario setup; a FastAPI backend that validates requests and normalizes responses; and separate Python services for the PINN, FNO, MeshGraphNet, and Transformer routes. The backend does not replace the models -- it orchestrates them and returns one comparable response format.
 
 \KeyPoints
 \begin{itemize}
@@ -270,7 +270,7 @@ With the implementation stack defined, I will start the model discussion with th
 Introduce the PINN route and explain why it is the main physical baseline.
 
 \WhatToSay
-PINN stands for Physics-Informed Neural Network. A PINN is a neural network that learns from data while also being penalized for violating selected governing physical equations. In this framework, it is the explicitly physics-informed route because its training objective can include thermoelastic residuals in addition to supervised data terms. It predicts temperature and displacement fields and serves as the physics-informed baseline for comparison with more data-driven routes. The interpretation must still be balanced: PINN is a neural surrogate whose loss encourages physical consistency. It is not an exact numerical solver and it is still limited by the simplified two-dimensional source--probe setup.
+PINN is the explicitly physics-informed route. It trains on supervised data plus thermoelastic residuals and predicts the temperature and displacement fields. It serves as the physics-consistency baseline against which the data-driven routes are judged. It is a neural surrogate whose loss encourages physical consistency -- not an exact solver.
 
 \KeyPoints
 \begin{itemize}
@@ -288,12 +288,12 @@ The next slide shows the PINN input contract and architecture.
 Explain what the PINN receives, what it predicts, and why the architecture is differentiable.
 
 \WhatToSay
-The public neural contract maps ten input features to four output fields. The inputs are coordinates, time, and material parameters: $x,y,z,t,E,\nu,\rho,\alpha,k,C_p$. The outputs are predicted temperature and three displacement components, $T,u,v,w$. The implemented PINN route is a fully connected \texttt{MLP\_PINN}: first a linear layer maps $10$ features to hidden dimension $192$, then five hidden blocks keep the $192$-dimensional representation with \texttt{tanh} activation, and the final layer maps $192$ features to $4$ outputs. This architecture is intentionally differentiable, because velocity, stress, strain, and residual terms are computed from automatic derivatives.
+The network is a multilayer perceptron: an input layer of physical features, five hidden blocks of width 192 with tanh activation, and an output layer for the predicted fields. Inputs are geometry, time, and material parameters; outputs are temperature and displacement. Velocity, stress, and strain are recovered through automatic differentiation during residual evaluation.
 
 \KeyPoints
 \begin{itemize}
   \item Inputs are geometry, time, and material properties.
-  \item The implemented network is $10\rightarrow192$, five hidden $192\rightarrow192$ blocks, and $192\rightarrow4$ output.
+  \item The implemented network is $9\rightarrow192$, five hidden $192\rightarrow192$ blocks, and $192\rightarrow3$ output.
   \item Differentiability allows residuals and velocity consistency to be evaluated from derivatives.
 \end{itemize}
 
@@ -306,7 +306,7 @@ With the architecture defined, I will explain the composite loss.
 Show how data fitting and physical consistency are combined in the PINN route.
 
 \WhatToSay
-The PINN loss combines supervised field loss, velocity consistency, elastic wave residuals, and coupled thermal residuals. The supervised term compares predicted fields against COMSOL-derived reference data. The velocity term supports dynamic interpretation from time derivatives. The wave and thermal residuals encourage consistency with the thermoelastic equations introduced earlier. This is the main reason PINN is treated differently from purely supervised baselines. At the same time, the slide also states a limitation: dedicated boundary-condition and initial-condition losses are not yet enforced, so the result must still be validated carefully.
+The objective is a weighted sum of four terms: a supervised field loss, a velocity-consistency term from time derivatives, an elastic-wave residual, and a coupled thermal residual. All residuals are computed from automatic derivatives. The current limitation is that dedicated boundary- and initial-condition losses are not yet enforced.
 
 \KeyPoints
 \begin{itemize}
@@ -324,7 +324,7 @@ The second model family is the Fourier Neural Operator.
 Introduce FNO as the structured-grid neural operator route.
 
 \WhatToSay
-The Fourier Neural Operator is included as a field-to-field neural operator. Instead of predicting only a scalar output, it learns a mapping from an input field space to an output field space. In the practical two-dimensional setup, the input tensor has batch, channel, and two spatial dimensions, and the output tensor has the same spatial grid with selected output channels. For the three-channel thermoelastic setup, the outputs are temperature and two in-plane displacement components. FNO is useful because it can exploit regular grid structure, but in the current prototype it remains a supervised neural-operator branch rather than an explicitly physics-informed solver.
+The FNO learns an operator between fields rather than point values. The input is a multi-channel field on a grid, and the output is the predicted thermoelastic field -- three channels: temperature and two displacement components. Because it learns in function space, it captures global spatial patterns efficiently.
 
 \KeyPoints
 \begin{itemize}
@@ -342,7 +342,7 @@ The next slide shows the main FNO processing pipeline.
 Summarize the processing stages of the FNO route.
 
 \WhatToSay
-The FNO pipeline maps an input field to an output field through several stages. First, a lifting layer maps input channels into latent features. Then spectral blocks process the latent field. Finally, a projection layer maps the latent representation back to physical output channels. Inside the spectral block, the operation is now written explicitly: Fourier transform, retained modes with learned weights, inverse Fourier transform, and a local convolution branch. In simple terms, the Fourier branch helps capture broader field patterns, while the local convolution branch preserves nearby spatial corrections.
+The field is first lifted into latent features, passed through a stack of spectral blocks, then projected back to the output field. Inside each spectral block: a Fourier transform into frequency space, multiplication of retained modes by trainable weights, an inverse transform, and a parallel local convolution. So it combines global spectral interactions with local spatial corrections.
 
 \KeyPoints
 \begin{itemize}
@@ -360,7 +360,7 @@ Now I will explain the spectral block more directly.
 Explain the Fourier-space operation and retained modes at an intuitive level.
 
 \WhatToSay
-The spectral block updates the latent field by combining a spectral branch and a local convolution branch. The spectral branch transforms the field into Fourier space, applies a learned spectral weight tensor to selected coefficients, and returns the result to physical space using the inverse transform. Only a limited number of low-frequency modes are retained. This reduces computational cost and controls model capacity. The important interpretation is that FNO learns global and local field structure from data, but these operations do not directly enforce the thermoelastic PDE residuals.
+Each layer update sums a spectral branch and a local convolution branch, then applies an activation. The spectral branch transforms the field, keeps only the low-frequency modes, multiplies them by a trainable weight tensor, and transforms back. Low modes carry the smooth global structure; the local convolution restores short-range detail. The number of retained modes is a key hyperparameter.
 
 \KeyPoints
 \begin{itemize}
@@ -378,7 +378,7 @@ The next slide gives the training objective and the current caveat for FNO.
 State how FNO is trained and make the current calibration limitation transparent.
 
 \WhatToSay
-The FNO route is trained with a supervised objective combining mean squared error and relative error. Normalization is computed on the training set and reused during validation, testing, and inference. Evaluation includes visual field comparison, channel-wise errors, relative $L^2$ error, and physical sanity checks. The most important caveat is that the current FNO prototype still requires output-scale recalibration before it can be treated as a physically reliable predictor. Therefore, in the results section it should be interpreted as a diagnostic branch rather than as a final calibrated model.
+The pipeline is dataset, normalization, model, prediction, loss, evaluation. The loss combines mean-squared error with a relative L2 term. Normalization statistics come from the training set and are reused everywhere. Evaluation uses field comparisons, channel-wise errors, and physical sanity checks. The current caveat: the FNO output scale still needs recalibration before it is physically reliable.
 
 \KeyPoints
 \begin{itemize}
@@ -396,7 +396,7 @@ The third model family is MeshGraphNet.
 Introduce MeshGraphNet as the mesh-aware surrogate route.
 
 \WhatToSay
-MeshGraphNet represents the COMSOL computational mesh as a graph. The mesh nodes form the set $\mathcal{V}$ and neighbouring connections form the edge set $\mathcal{E}$. Each node contains coordinates, current physical state, material parameters, and scenario conditions. Each edge contains relative geometry, such as the vector and distance between neighbouring nodes. This is useful because COMSOL data are naturally mesh-based. MeshGraphNet can preserve nonuniform mesh connectivity more naturally than a regular grid model, although it is still a supervised surrogate rather than a full physical solver.
+MeshGraphNet represents the COMSOL mesh directly as a graph -- nodes are mesh points, edges connect neighbours. Each node carries its coordinates, current physical state, material parameters, and scenario condition. Each edge carries the relative geometry between two nodes. The model predicts the next physical state for every node.
 
 \KeyPoints
 \begin{itemize}
@@ -414,7 +414,7 @@ The next slide shows the input and output structure in more detail.
 Clarify what is stored at nodes and edges and what the graph model predicts.
 
 \WhatToSay
-This slide separates node features, edge attributes, and output fields. Nodes store coordinates, material parameters, scenario condition, and current dynamic state. Edges store relative spatial relations between neighbouring nodes. The output is the predicted next physical field vector for each mesh node. This makes MeshGraphNet suitable for state-transition style prediction. The key distinction from PINN is that physical quantities enter through features and training data, while the governing equations are not enforced as explicit residuals in the same way.
+On the left, the two inputs: node feature vectors with position, state, material, and condition; and edge attributes with relative position and distance. The mesh becomes a graph $G$ of vertices and edges. The output is the predicted next-step field vector for every node.
 
 \KeyPoints
 \begin{itemize}
@@ -432,7 +432,7 @@ Now I will summarize the graph neural network architecture.
 Describe the MeshGraphNet architecture without excessive implementation detail.
 
 \WhatToSay
-The architecture has three main parts. The encoder maps raw node and edge features into latent vectors. The processor applies repeated message-passing blocks over the graph connectivity. The decoder maps the final latent node states into predicted physical fields. In this implementation the model uses a latent dimension of $128$, ten message-passing steps, MLP encoders, and a node-wise decoder. This design is common in neural simulators because it separates feature embedding, learned interaction modelling, and output prediction.
+Three stages. Encoders map node and edge features into a latent space of dimension 128. Then ten message-passing blocks propagate information between neighbouring nodes -- this is the processor. Finally a node-wise decoder maps the latent state to the predicted output fields.
 
 \KeyPoints
 \begin{itemize}
@@ -450,7 +450,7 @@ The next slide explains the message-passing block itself.
 Connect graph message passing with local physical interaction learning.
 
 \WhatToSay
-In the message-passing block, edge representations are updated using information from neighbouring node states and current edge attributes. Then incoming edge messages are accumulated for each destination node using scatter-add aggregation. Finally, the node state is updated with a residual connection and layer normalization. This can be interpreted as a learned local interaction mechanism on the mesh. It is useful for modelling spatial dependencies, but physical reliability still depends on validation against reference fields because the equations are learned implicitly rather than enforced as residuals.
+Each block has two updates. First the edge update: every edge is refined from its two endpoint nodes and its own features, with a residual connection and layer norm. Then messages are aggregated per destination node by scatter-add, and the node update refines each node from its state and the aggregated messages. The residual connections keep repeated message passing stable.
 
 \KeyPoints
 \begin{itemize}
@@ -468,7 +468,7 @@ The fourth model family is the Transformer-style surrogate.
 Introduce the attention-based route and its token representation.
 
 \WhatToSay
-The Transformer route treats sampled points as tokens. Input tokens include coordinates, initial temperature and displacement state, velocity-like components, and material parameters. Query tokens contain the coordinates where fields are requested. The output at each query point is temperature and two in-plane displacement components. This token structure makes the route flexible because the number of input points and query points can differ. Its advantage is fast query-style prediction, while its limitation is weaker explicit physics enforcement compared with PINN.
+The transformer is a neural operator on a point set. Input tokens, on the left, live in R-thirteen: coordinates, initial state, and material parameters. Query tokens, on the right, are 2D coordinates where we want a prediction. At each query the model returns R-three: temperature and two displacement components. Input and query sizes are independent, so the operator is discretisation-invariant.
 
 \KeyPoints
 \begin{itemize}
@@ -486,7 +486,7 @@ Next, I will show how the Transformer architecture processes those tokens.
 Summarize the encoder--decoder attention mechanism for query prediction.
 
 \WhatToSay
-The Transformer architecture has an encoder and a decoder. The encoder processes input tokens using self-attention layers, building a representation of the known thermoelastic state. The decoder processes query tokens and uses cross-attention to attend to the encoded input representation. Finally, a linear head returns the predicted temperature and displacement components. In intuitive terms, each requested query point can use attention to decide which input points are most relevant for its prediction. This supports flexible query-point inference, but attention is still a learned statistical mechanism rather than an explicit thermoelastic conservation law.
+Two pipelines. Encoder: input tokens projected into the embedding space, then self-attention layers -- each token attends to every other. Decoder: queries projected and passed through cross-attention layers where keys and values come from the encoder output. A linear head maps decoded queries back to $T$, $u$, $v$.
 
 \KeyPoints
 \begin{itemize}
@@ -504,7 +504,7 @@ The next slide defines the training loss for this route.
 Explain the supervised objective and its limited physical regularisation.
 
 \WhatToSay
-The Transformer loss combines a supervised reconstruction term, a velocity consistency term, and a thermal residual term. The supervised loss reconstructs the COMSOL reference fields. The velocity consistency term aligns displacement rate with exported velocity. The thermal residual encourages diffusion-like behaviour through thermal diffusivity $k/(\rho C_p)$. The training uses AdamW and token subsampling with $N_{\mathrm{in}}=N_q=1024$ to control computational cost. The interpretation remains cautious: this is mainly a supervised attention-based surrogate, not a strict physics-informed solver like the PINN route.
+The loss is a weighted sum of three terms with weights one, zero-point-two-five, and zero-point-zero-five. First, supervised MSE against COMSOL ground truth. Second, velocity consistency: the time derivative of predicted displacement, obtained by autodiff, matches the exported velocity. Third, a thermal residual that enforces the diffusion side of the heat equation. Trained with AdamW, token subsampling for bounded attention cost.
 
 \KeyPoints
 \begin{itemize}
@@ -522,7 +522,7 @@ Now I will move from model descriptions to calculation status and results.
 Summarize the evaluation setup and state caveats before showing plots.
 
 \WhatToSay
-The calculation setup uses forty scenarios per material and four materials: granite, sandstone, limestone, and basalt. With four model routes, this gives $40\times4\times4=640$ model responses under one shared contract. The slide also emphasizes zero fallback: every plotted response is an active model output, not a mock result. The operating envelope remains two-dimensional plane strain. The FNO caveat is repeated here because it affects interpretation: FNO is included in the comparison, but its output scales are still miscalibrated, so it should currently be treated as a diagnostic branch.
+The comparison covers 40 scenarios per material, four materials, four models -- 640 active responses, zero fallback, all in 2D plane strain. One caveat to state up front: the FNO output scale is still miscalibrated, so we treat it as a diagnostic branch rather than a ranked predictor.
 
 \KeyPoints
 \begin{itemize}
@@ -540,7 +540,7 @@ The first result slide compares predicted travel times.
 Explain what the travel-time plot shows and how to interpret the model differences.
 
 \WhatToSay
-This plot compares predicted travel time by model and material. The approximate values shown on the slide are about $0.11$ ms for PINN, $0.14$ ms for Transformer, $1.29$ ms for FNO, and $2.47$ ms for MeshGraphNet. The key observation is that model-family differences are larger than the basalt--sandstone material difference in the current prototype. This does not mean one model is universally correct. It means that model formulation strongly affects directional travel-time estimates, so comparison and validation are necessary before drawing physical conclusions.
+Mean predicted travel time per route: PINN around 0.11 milliseconds, Transformer 0.14, FNO 1.3, MeshGraphNet 2.5. The key observation is that the differences between model families are much larger than the difference between basalt and sandstone -- in this prototype the model choice dominates the material effect.
 
 \KeyPoints
 \begin{itemize}
@@ -558,7 +558,7 @@ To evaluate accuracy, the next slide compares predictions with an analytical ref
 Present the main quantitative result and its cautious interpretation.
 
 \WhatToSay
-Here the predicted travel times are compared with a simple analytical reference, $t_{\mathrm{gt}}=r/V_p$. In this formula, $t_{\mathrm{gt}}$ is reference travel time, $r$ is source--probe distance, and $V_p$ is compressional wave velocity. This is not a full thermoelastic validation; it is a sanity check under a simple isotropic approximation. In the balanced sweep, PINN has a median error of about $2.0\%$ and remains within the $10\%$ band in all cases. Transformer and FNO have larger median errors, and MeshGraphNet remains outside the most accurate group in this comparison.
+We sanity-check against the analytical body-wave travel time, distance over P-velocity. PINN has a median error of two percent and stays inside the ten-percent band for every scenario. Transformer is about thirty percent, FNO thirty-five, MeshGraphNet over a hundred. So PINN is the only route that is quantitatively trustworthy on travel time today.
 
 \KeyPoints
 \begin{itemize}
@@ -576,7 +576,7 @@ Accuracy is one side of the comparison; inference latency is also important.
 Compare practical response time and explain the fixed-horizon issue.
 
 \WhatToSay
-The latency plot shows that all routes return predictions in milliseconds on the development machine, which is fast enough for interactive prototype use. The median latency is approximately $1.3$ ms for Transformer, $1.5$ ms for MeshGraphNet, $2.4$ ms for FNO, and $2.6$ ms for PINN. However, speed is not the only criterion. PINN is also the only route that changes smoothly with requested observation time. The other routes currently behave more like fixed-horizon predictors, so their temporal behaviour needs additional development for time-dependent directional studies.
+On speed the order reverses: Transformer is fastest at about 1.3 milliseconds, then MeshGraphNet, FNO, and PINN at 2.6. All four are well under ten milliseconds. One more point: PINN is the only route that varies smoothly with the requested observation time; the others currently behave as fixed-horizon predictors.
 
 \KeyPoints
 \begin{itemize}
@@ -594,7 +594,7 @@ Before concluding, I will state the main threats to validity.
 Show scientific caution and define the limits of the results.
 
 \WhatToSay
-The main threats to validity are listed here. First, the training data are limited and come from a pilot COMSOL-derived configuration, not from a full calibrated geological database. Second, the physical setup is simplified to two-dimensional plane strain with effective material parameters. Third, the current FNO route has a normalization and output-scale issue. Fourth, the analytical reference $r/V_p$ is useful but isotropic and incomplete for full thermoelastic validation. These limitations are important because the results should be interpreted only within the simplified assumptions of the study.
+Four honest limitations. The training data is a pilot COMSOL configuration, not a calibrated geological database. The setup is simplified 2D with effective parameters. The FNO normalization is not yet reliable. And the analytical reference is isotropic -- a sanity check, not a full thermoelastic validation.
 
 \KeyPoints
 \begin{itemize}
@@ -612,7 +612,7 @@ After the limitations, I will briefly show the web application prototype.
 Introduce the web interface as the user-facing part of the prototype.
 
 \WhatToSay
-This slide introduces the local web application. The purpose of the interface is to make the research prototype usable: a user can configure a planar source--probe scenario, choose a model route, and inspect the normalized prediction response. The important limitation remains visible from the interface itself: this is a thesis-demo workspace for reproducible comparison, not a field-validated thermoelastic simulator.
+The whole comparison is exposed through a web application. This is the landing view: a research-prototype workspace for directional prediction in a fixed 2D domain.
 
 \KeyPoints
 \begin{itemize}
@@ -630,7 +630,7 @@ Next, I will show the full prediction workspace.
 Show the full interface layout used after a prediction is returned.
 
 \WhatToSay
-This slide shows the full prediction workspace after running a model request. The interface combines the prediction result panels, metadata, spatial-output state, and diagnostics in one view. The goal is not only to display a number, but to make the response interpretable: thermal response, mechanical displacement, direction, time behaviour, and runtime status are presented together.
+The user picks a material and a model route, sets the source and probe coordinates inside the unit square, and chooses the observation time. The form maps one-to-one onto the shared prediction contract that the backend validates.
 
 \KeyPoints
 \begin{itemize}
@@ -648,7 +648,7 @@ Now I will zoom into the source--probe geometry visualization.
 Explain how the interface visualizes the directional prediction query.
 
 \WhatToSay
-This slide focuses on the source--probe visualization. The source and probe locations define the directional query. The interface shows the distance between them, the azimuth angle, and the normalized unit direction. This is useful because the prediction task is not an abstract model call: it is tied to a specific source position, probe position, distance, and direction inside the simplified two-dimensional domain.
+The workspace draws the geometry live: source and probe points, the propagation arrow with distance and azimuth, and a unit-direction key. The geometry shown here is computed by the same backend logic used in the prediction, so the picture and the numbers always agree.
 
 \KeyPoints
 \begin{itemize}
@@ -666,7 +666,7 @@ The next slide shows the response dashboard in more detail.
 Show the main numerical response panels returned by the selected model.
 
 \WhatToSay
-The prediction dashboard presents the main numerical response values. It includes thermal response, mechanical displacement response, directional response, temporal response, and model metadata. This layout is important because every model route returns the same response structure, even though the internal model architectures are different. In the defence, I would point out that these values are prototype predictions and should be interpreted within the simplified assumptions of the study.
+After a run, the response is shown as cards: the thermal response, the displacement components and magnitude, the directional summary, and the travel time -- the same normalized format for every model route.
 
 \KeyPoints
 \begin{itemize}
@@ -684,7 +684,7 @@ The final interface slide shows runtime metadata and diagnostics.
 Show how the prototype reports service status, metadata, and limitations.
 
 \WhatToSay
-This slide shows the diagnostic part of the interface. It reports the model identity, version, inference time, request identifier, spatial-output state, warnings, and notes. This is important for a research prototype because it makes the runtime context explicit. The interface also states that the result is a prototype prediction and not a field-validated thermoelastic simulation, which keeps the scientific interpretation cautious.
+At the bottom, the diagnostics strip reports the run state, the model version, inference time, request identifier, and any warnings. This keeps every prediction traceable and makes clear when a route is a real model output versus a fallback.
 
 \KeyPoints
 \begin{itemize}
@@ -702,7 +702,7 @@ With the prototype shown, I can summarize the conclusions.
 State the main scientific outcomes of the diploma work.
 
 \WhatToSay
-The thesis develops a physically grounded comparative framework for AI-guided prediction of thermoelastic wave propagation in geological media. Within the tested assumptions, PINN is the strongest physics-informed baseline and shows the best agreement with the analytical travel-time reference. Transformer is the fastest route and is useful for rapid query-style inference. MeshGraphNet remains a useful mesh-aware surrogate candidate. FNO should currently be treated as a diagnostic branch until output normalization is corrected. Overall, the work demonstrates a careful prototype for comparing neural surrogate approaches rather than a final geophysical simulator.
+Four takeaways. We built a physically grounded comparative framework for this prediction task. PINN is the strongest physics-informed baseline, with the best agreement against the analytical reference. Transformer is the fastest route, and MeshGraphNet is a useful mesh-aware candidate. FNO, for now, is a diagnostic branch until its output normalization is fixed.
 
 \KeyPoints
 \begin{itemize}
@@ -720,7 +720,7 @@ Finally, I will outline the most important next steps.
 Show how the prototype can be developed after the diploma.
 
 \WhatToSay
-The first future direction is to retrain and recalibrate the two-dimensional FNO route. The second is to add time-conditioned rollout behaviour to MeshGraphNet. The third is to extend the material catalog with more complete thermoelastic parameters and validation data. The fourth is to compare against additional analytical or numerical baselines. The final message is that the prototype estimates directional characteristics of thermoelastic wave propagation within simplified assumptions and provides a basis for further research.
+Next: retrain and recalibrate the 2D FNO; add time-conditioned rollout to MeshGraphNet; extend the material catalogue with more complete thermoelastic and validation data; and compare against additional analytical or numerical baselines. To be precise about scope -- the prototype estimates directional characteristics within the simplified assumptions of the study.
 
 \KeyPoints
 \begin{itemize}
@@ -738,7 +738,7 @@ This completes the main presentation.
 Close the presentation and invite questions.
 
 \WhatToSay
-Thank you for your attention. I will be happy to answer your questions about the physical assumptions, the COMSOL dataset, the model comparison, or the interpretation of the results.
+Thank you for your attention -- we are happy to take questions.
 
 \KeyPoints
 \begin{itemize}

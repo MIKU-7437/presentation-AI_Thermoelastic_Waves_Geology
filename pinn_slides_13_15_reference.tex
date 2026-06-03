@@ -1,0 +1,185 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=16mm]{geometry}
+\usepackage{fontspec}
+\setmainfont{Arial}
+\setsansfont{Arial}
+\usepackage{amsmath,amssymb}
+\usepackage[table]{xcolor}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}
+
+\definecolor{TitleBlue}{HTML}{17365D}
+\definecolor{SoftBlue}{HTML}{EAF2FA}
+\definecolor{SoftGray}{HTML}{F5F7FA}
+\definecolor{LineGray}{HTML}{C9D2DC}
+\definecolor{Warn}{HTML}{FFF4DF}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\emergencystretch}{3em}
+\sloppy
+\setlist[itemize]{leftmargin=15pt,itemsep=2pt,topsep=2pt}
+\renewcommand{\arraystretch}{1.24}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcommand{\slide}[1]{\section*{\textcolor{TitleBlue}{#1}}}
+\newcommand{\minihead}[1]{\vspace{3pt}\textbf{\textcolor{TitleBlue}{#1}}\par}
+\newcommand{\callout}[1]{%
+  \vspace{3pt}
+  \noindent\colorbox{SoftBlue}{%
+    \parbox{\dimexpr\linewidth-2\fboxsep\relax}{\raggedright #1}
+  }
+  \vspace{3pt}
+}
+
+\begin{document}
+
+{\LARGE\textbf{\textcolor{TitleBlue}{PINN slides 13--15: explanation and variables}}}
+
+\vspace{3pt}
+{\large Шпаргалка к слайдам 13--15: что говорить, как читать формулы и что означает каждая переменная.}
+
+\vspace{6pt}
+\begin{tabularx}{\linewidth}{L{28mm}X}
+\toprule
+\textbf{Контекст} & PINN-блок презентации: Physics-Informed Baseline, Input and Architecture, Composite Loss and Residuals.\\
+\textbf{Главная идея} & PINN - это нейросетевой суррогат, который учится не только по данным COMSOL, но и получает штраф за нарушение выбранных физических уравнений.\\
+\bottomrule
+\end{tabularx}
+
+\slide{Slide 13. PINN: Physics-Informed Baseline}
+
+\minihead{Что означает слайд}
+PINN расшифровывается как \textbf{Physics-Informed Neural Network} - физически-информированная нейронная сеть. В этой работе PINN является базовой моделью, которая явно учитывает физику: она обучается на supervised data и одновременно использует thermoelastic residuals.
+
+\callout{\textbf{Коротко для защиты:} PINN - это не точный численный решатель, как COMSOL. Это нейросетевой суррогат: он быстро предсказывает поля, а физические уравнения входят в обучение через дополнительные штрафы в функции потерь.}
+
+\minihead{Как можно объяснить вслух}
+``PINN is the explicitly physics-informed route. It learns from COMSOL-derived data, but its loss also penalizes violations of selected thermoelastic equations. Therefore it is our physics-consistency baseline. It predicts temperature and displacement fields, but it should be interpreted as a neural surrogate, not as an exact numerical solver.''
+
+\minihead{Термины на слайде}
+\begin{tabularx}{\linewidth}{L{34mm}L{38mm}X}
+\rowcolor{SoftBlue}
+\textbf{Термин} & \textbf{Как читать} & \textbf{Что означает}\\
+PINN & ``пинн'' или ``physics-informed neural network'' & Нейросеть, в loss которой добавлены физические ограничения или residuals.\\
+Supervised data & ``supervised data'' & Обучающие данные с известными правильными ответами: поля из COMSOL.\\
+Thermoelastic residuals & ``thermoelastic residuals'' & Ошибки невязки в уравнениях термоупругости: насколько предсказание нарушает физические соотношения.\\
+Temperature field & ``temperature field'' & Поле температуры $T$ по точкам области.\\
+Displacement field & ``displacement field'' & Поле смещений: насколько материал сдвинулся по координатам.\\
+Neural surrogate & ``neural surrogate'' & Быстрая ML-аппроксимация физической модели, а не полноценный solver.\\
+\end{tabularx}
+
+\slide{Slide 14. PINN Input and Architecture}
+
+\minihead{Главная формула}
+\[
+  [x,y,t,E,\nu,\rho,\alpha,k,C_p]\rightarrow[T,u,v]
+\]
+
+\minihead{Как читать формулу}
+``The input vector consists of $x$, $y$, $t$, $E$, nu, rho, alpha, $k$, and $C$ sub $p$. The network maps these nine input features to three outputs: $T$, $u$, and $v$.''
+
+\minihead{Смысл формулы}
+Слева находятся \textbf{входные признаки}: 2D-координаты, время и свойства материала. Справа находятся \textbf{предсказанные поля}: температура и две компоненты смещения в плоскости.
+
+\minihead{Все переменные входа}
+\begin{tabularx}{\linewidth}{L{20mm}L{34mm}L{35mm}X}
+\rowcolor{SoftBlue}
+\textbf{Символ} & \textbf{Как читается} & \textbf{Тип} & \textbf{Что обозначает}\\
+$x$ & ``икс'' & координата & Положение точки по горизонтальной оси.\\
+$y$ & ``игрек'' / ``уай'' & координата & Положение точки по вертикальной оси в 2D-сечении.\\
+$t$ & ``тэ'' / ``time'' & время & Момент наблюдения, для которого модель предсказывает ответ.\\
+$E$ & ``E'', Young's modulus & упругий параметр & Модуль Юнга: жесткость материала при растяжении/сжатии. Чем больше $E$, тем жестче материал.\\
+$\nu$ & ``nu'' & упругий параметр & Коэффициент Пуассона: связь между продольной и поперечной деформацией.\\
+$\rho$ & ``rho'' & плотность & Плотность материала. Влияет на инерцию и скорости волн.\\
+$\alpha$ & ``alpha'' & тепловой параметр & Коэффициент теплового расширения: насколько материал расширяется при нагреве.\\
+$k$ & ``k'' & тепловой параметр & Теплопроводность: насколько быстро материал проводит тепло.\\
+$C_p$ & ``C sub p'' & тепловой параметр & Удельная теплоемкость при постоянном давлении: сколько энергии нужно для нагрева материала.\\
+\end{tabularx}
+
+\minihead{Все переменные выхода}
+\begin{tabularx}{\linewidth}{L{20mm}L{34mm}L{35mm}X}
+\rowcolor{SoftBlue}
+\textbf{Символ} & \textbf{Как читается} & \textbf{Тип} & \textbf{Что обозначает}\\
+$T$ & ``T'', temperature & температура & Предсказанная температура в точке. В презентации говорится, что температура интерпретируется в kelvin.\\
+$u$ & ``u'' & смещение & Компонента механического смещения вдоль оси $x$.\\
+$v$ & ``v'' & смещение & Компонента механического смещения вдоль оси $y$.\\
+$\hat{Y}$ & ``Y hat'' & вектор предсказания & Вектор предсказанных выходов, обычно $\hat{Y}=[\hat{T},\hat{u},\hat{v}]$. Шляпка означает ``predicted'' или ``estimated''.\\
+\end{tabularx}
+
+\minihead{Архитектура сети}
+\begin{tabularx}{\linewidth}{L{38mm}L{38mm}X}
+\rowcolor{SoftBlue}
+\textbf{Блок} & \textbf{Как читать} & \textbf{Что означает}\\
+Input layer: 9 features & ``input layer with nine features'' & На вход подается 9 чисел: 2D-координаты, время и параметры материала.\\
+Linear $9\rightarrow192$ & ``linear nine to one ninety-two'' & Полносвязный слой переводит 9 признаков в 192 скрытых признака.\\
+Tanh & ``тан аш'' или ``hyperbolic tangent'' & Нелинейная функция активации. Она делает сеть способной описывать сложные зависимости.\\
+$5\times$ hidden blocks & ``five hidden blocks'' & Пять скрытых блоков сохраняют размерность 192 и уточняют внутреннее представление.\\
+Linear $192\rightarrow192$ & ``linear one ninety-two to one ninety-two'' & Скрытый полносвязный слой без изменения ширины.\\
+Linear $192\rightarrow3$ & ``linear one ninety-two to three'' & Последний слой переводит скрытое представление в 3 выходные величины.\\
+\texttt{MLP\_PINN} & ``MLP PINN'' & Multilayer perceptron implementation of the PINN route.\\
+\end{tabularx}
+
+\callout{\textbf{Почему важна differentiability:} скорость, strain, stress и residuals считаются через automatic differentiation. Поэтому сеть должна быть дифференцируемой по координатам и времени.}
+
+\slide{Slide 15. PINN Composite Loss and Residuals}
+
+\minihead{Главная формула}
+\[
+  \mathcal{L}
+  =
+  \lambda_{\mathrm{sup}}\mathcal{L}_{\mathrm{sup}}
+  +
+  \lambda_{\mathrm{vel}}\mathcal{L}_{\mathrm{vel}}
+  +
+  \lambda_{\mathrm{wave}}\mathcal{L}_{\mathrm{wave}}
+  +
+  \lambda_{\mathrm{th}}\mathcal{L}_{\mathrm{th}}
+\]
+
+\minihead{Как читать формулу}
+``The total loss, calligraphic L, is a weighted sum of four terms: lambda sup times L sup, lambda vel times L vel, lambda wave times L wave, and lambda th times L th.''
+
+\minihead{Смысл формулы}
+Модель обучается не по одному критерию, а по сумме нескольких ошибок. Одни ошибки заставляют модель совпадать с данными COMSOL, другие заставляют предсказание быть физически правдоподобным.
+
+\minihead{Все переменные в loss}
+\begin{tabularx}{\linewidth}{L{30mm}L{42mm}X}
+\rowcolor{SoftBlue}
+\textbf{Символ} & \textbf{Как читается} & \textbf{Что обозначает}\\
+$\mathcal{L}$ & ``calligraphic L'' / ``total loss'' & Общая функция потерь, которую минимизирует модель при обучении.\\
+$\lambda_{\mathrm{sup}}$ & ``lambda sup'' & Вес supervised field loss. Определяет, насколько сильно учитывать совпадение с COMSOL-полями.\\
+$\mathcal{L}_{\mathrm{sup}}$ & ``L sup'' & Supervised field loss для $T,u,v$: ошибка между предсказанными и reference полями.\\
+$\lambda_{\mathrm{vel}}$ & ``lambda vel'' & Вес velocity-consistency term.\\
+$\mathcal{L}_{\mathrm{vel}}$ & ``L vel'' & Ошибка согласованности скорости: скорость получается из временных производных смещения и сравнивается с reference velocity.\\
+$\lambda_{\mathrm{wave}}$ & ``lambda wave'' & Вес elastic-wave residual.\\
+$\mathcal{L}_{\mathrm{wave}}$ & ``L wave'' & Невязка уравнения упругой волны: проверяет, согласовано ли поле смещений с механической частью модели.\\
+$\lambda_{\mathrm{th}}$ & ``lambda th'' & Вес coupled thermal residual.\\
+$\mathcal{L}_{\mathrm{th}}$ & ``L th'' & Тепловая невязка: проверяет согласованность температуры с тепловой частью связанной термоупругой системы.\\
+\end{tabularx}
+
+\minihead{Дополнительные обозначения и слова}
+\begin{tabularx}{\linewidth}{L{36mm}L{42mm}X}
+\rowcolor{SoftBlue}
+\textbf{Термин} & \textbf{Как читать} & \textbf{Что означает}\\
+Residual & ``residual'' & Невязка: насколько предсказание нарушает уравнение. Если residual близок к нулю, физическое уравнение выполняется лучше.\\
+Automatic derivatives & ``automatic derivatives'' & Производные, которые считаются через autograd, а не вручную.\\
+Autograd & ``auto-grad'' & Механизм автоматического дифференцирования в ML-фреймворке.\\
+Velocity consistency & ``velocity consistency'' & Проверка, что производная смещения по времени соответствует скорости.\\
+Boundary-condition loss & ``boundary-condition loss'' & Штраф за нарушение граничных условий. На текущем слайде указано, что он еще не enforced.\\
+Initial-condition loss & ``initial-condition loss'' & Штраф за нарушение начальных условий. Он тоже пока не enforced.\\
+\end{tabularx}
+
+\minihead{Готовый короткий ответ на вопрос комиссии}
+``The PINN loss combines data fitting and physics consistency. The supervised term fits the COMSOL fields, the velocity term checks time derivatives, and the wave and thermal residuals penalize violations of the thermoelastic equations. In the current prototype, boundary and initial condition losses are not enforced yet, so this is a physics-informed surrogate rather than a fully constrained solver.''
+
+\slide{One-minute summary for slides 13--15}
+
+PINN is used as the physics-informed baseline. The input vector contains 2D spatial coordinates, observation time, and material parameters. The network is a differentiable multilayer perceptron with hidden width 192 and tanh activations. It predicts temperature and two in-plane displacement components. During training, the loss combines supervised agreement with COMSOL and physics-based residual terms. This makes PINN more physically constrained than purely data-driven routes, but it is still a surrogate and not an exact solver.
+
+\end{document}
